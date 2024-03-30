@@ -4,6 +4,7 @@ import { MapConnection } from "./MapConnection";
 export class MapPosition {
     public position: Vector;
     public connections: Array<MapConnection>;
+    public averageConnectionDistance: number|undefined; 
 
     constructor(position: Vector) {
         this.position = position;
@@ -30,5 +31,19 @@ export class MapPosition {
         this.connections = this.connections.sort((a: MapConnection, b: MapConnection) => {
             return a.lenght - b.lenght;
         });
+
+        this.setAverageConnectionDistance();
+    }
+
+    private setAverageConnectionDistance(): number {
+        let lenghtSum = 0;
+
+        for (const connection of this.connections) {
+            lenghtSum += connection.lenght;
+        }
+
+        this.averageConnectionDistance = lenghtSum / this.connections.length;
+
+        return this.averageConnectionDistance;
     }
 }

@@ -38,7 +38,7 @@ export class MapRender {
 
         this.map.positions.forEach(position => {
             const circle = (new Graphics())
-            .circle(0, 0, 25)
+            .circle(0, 0, 20)
             .fill(0xcfcfcf);
 
             this.positionContainer.addChild(circle);
@@ -52,8 +52,6 @@ export class MapRender {
         this.removeAllConnectionRenders();
 
         for (const position of this.map.positions) {
-            console.log('position');
-            console.log(position);
             for (const connection of position.connections) {
                 const line = (new Graphics())
                     .moveTo(connection.positionA.position.x, connection.positionA.position.y)
@@ -61,8 +59,7 @@ export class MapRender {
                     .stroke({
                         color: 'white',
                         width: 3
-                    })
-                    
+                    });
                 
                 this.connectionContainer.addChild(line);
             }

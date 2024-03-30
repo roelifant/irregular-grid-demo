@@ -6,7 +6,12 @@ import { MapRender } from "./app/classes/MapRender";
 const canvas = ref<null|HTMLCanvasElement>();
 
 onMounted(() => {
-    const map = new GameMap(canvas.value.clientWidth, canvas.value.clientHeight, 30, 100, 50);
+    const map = new GameMap(
+        canvas.value.clientWidth,
+        canvas.value.clientHeight,
+        40,
+        90,
+        70);
     const render = new MapRender(canvas.value, map);
     render.init();
 });
