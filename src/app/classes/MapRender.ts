@@ -6,7 +6,7 @@ export class MapRender {
     public map: GameMap;
     public pixiApp: Application;
 
-    private positionContainer!: Container;
+    public positionContainer!: Container;
     private connectionContainer!: Container;
 
     constructor(canvas: HTMLCanvasElement, map: GameMap) {
@@ -23,8 +23,8 @@ export class MapRender {
             resolution: window.devicePixelRatio || 1
         });
 
-        this.positionContainer = new Container;
-        this.connectionContainer = new Container;
+        this.positionContainer = new Container();
+        this.connectionContainer = new Container();
 
         this.pixiApp.stage.addChild(this.connectionContainer);
         this.pixiApp.stage.addChild(this.positionContainer);
@@ -38,7 +38,7 @@ export class MapRender {
 
         this.map.positions.forEach(position => {
             const circle = (new Graphics())
-            .circle(0, 0, 20)
+            .circle(0, 0, 15)
             .fill(0xcfcfcf);
 
             this.positionContainer.addChild(circle);

@@ -318,4 +318,14 @@ export class Vector {
 
         return true;
     }
+
+    public projectToLine(lineStart: Vector, lineEnd: Vector): Vector
+    {
+        const AB = lineEnd.subtract(lineStart);
+        const AC = this.subtract(lineStart);
+
+        const AD = AB.scale(AC.dot(AB)).divide(AB.dot(AB));
+
+        return lineStart.add(AD);
+    }
 }

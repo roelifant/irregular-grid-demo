@@ -5,20 +5,21 @@ import { MapRender } from "./app/classes/MapRender";
 
 const canvas = ref<null|HTMLCanvasElement>();
 
-onMounted(() => {
+onMounted(async () => {
     const map = new GameMap(
         canvas.value.clientWidth,
         canvas.value.clientHeight,
         40,
-        90,
-        70);
+        70,
+        50);
     const render = new MapRender(canvas.value, map);
-    render.init();
+    await render.init();
 
-    map.areas.forEach(area => {
-        console.log('adjacent areas for '+area!.name);
-        console.log(area?.adjacentAreas);
-    })
+    // test the adjacent areas
+    // map.areas.forEach(area => {
+    //     console.log('adjacent areas for '+area!.name);
+    //     console.log(area?.adjacentAreas);
+    // })
 });
 </script>
 
