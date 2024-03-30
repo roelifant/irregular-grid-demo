@@ -1,10 +1,12 @@
 import { Vector } from "../vectors/Vector";
+import { Area } from "./Area";
 import { MapConnection } from "./MapConnection";
 
 export class MapPosition {
     public position: Vector;
     public connections: Array<MapConnection>;
-    public averageConnectionDistance: number|undefined; 
+    public averageConnectionDistance: number|undefined;
+    public area: Area|undefined;
 
     constructor(position: Vector) {
         this.position = position;

@@ -14,6 +14,11 @@ onMounted(() => {
         70);
     const render = new MapRender(canvas.value, map);
     render.init();
+
+    map.areas.forEach(area => {
+        console.log('adjacent areas for '+area!.name);
+        console.log(area?.adjacentAreas);
+    })
 });
 </script>
 

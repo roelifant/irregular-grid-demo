@@ -8,6 +8,10 @@ export class GameMap {
     public positions: Array<MapPosition>;
     public positionCount: number;
 
+    public get areas() {
+        return this.positions.map(pos => pos.area);
+    }
+
     constructor(width: number, height: number, positionCount: number, minPointDistance: number, padding: number = 0) {
         this.positionCount = positionCount;
         
