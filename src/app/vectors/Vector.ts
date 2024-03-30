@@ -298,7 +298,24 @@ export class Vector {
         console.table(object);
     }
 
-    copy() {
+    public copy() {
         return Vector.fromVector(this);
+    }
+
+    public matches(vector: Vector): boolean {
+        if(this.components.length !== vector.components.length) {
+            return false;
+        }
+
+        for (let i = 0; i < this.components.length; i++) {
+            const thisComp = this.components[i];
+            const otherComp = vector.components[i];
+
+            if(thisComp !== otherComp) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

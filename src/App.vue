@@ -1,22 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { MapSurface } from "./app/classes/MapSurface";
-import { Vector } from './app/vectors/Vector';
+import { GameMap } from "./app/classes/GameMap";
 
 const canvas = ref<null|HTMLCanvasElement>();
 
 onMounted(() => {
-    // create grid here
-    const surface = new MapSurface(canvas.value.clientWidth, canvas.value.clientHeight, 50);
-
-    const pointCount = 50;
-    const points: Array<Vector> = [];
-
-    for (let i = 0; i < pointCount; i++) {
-        points.push(surface.getRandomPosition());
-    }
-
-    console.log(points);
+    const map = new GameMap(canvas.value.clientWidth, canvas.value.clientHeight, 50);
 })
 </script>
 
