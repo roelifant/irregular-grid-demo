@@ -1,3 +1,4 @@
+import { IMapConfig } from "../interfaces/IMapConfig";
 import { Vector } from "../vectors/Vector";
 import { Area } from "./Area";
 import { MapConnection } from "./MapConnection";
@@ -5,6 +6,7 @@ import { MapPosition } from "./MapPosition";
 import { MapSurface } from "./MapSurface";
 
 export class GameMap {
+    public config: IMapConfig;
     public surface: MapSurface;
     public positions: Array<MapPosition> = [];
     public positionCount: number;
@@ -13,61 +15,68 @@ export class GameMap {
         return this.positions.map(pos => pos.area);
     }
 
-    constructor(width: number, height: number, positionCount: number, minPointDistance: number, padding: number = 0) {
-        this.positionCount = positionCount;
+    constructor(config: IMapConfig) {
+        this.config = config;
+
+        this.positionCount = config.positions;
 
         // create surface
-        this.surface = new MapSurface(width, height, padding);
-
-        // generate the rest
-        this.generate(minPointDistance, padding);
+        this.surface = new MapSurface(config.width, config.height, config.padding);
     }
 
-    private generate(minPointDistance: number, padding: number, attempts: number = 50) {
+    public async generate(attempts: number = 100 * this.config.generationStrengthPercent) {
+        return new Promise<void>((resolve) => {
+            setTimeout(() => {
+                const minPointDistance = this.config.minimalPositionDistance;
+                const padding = this.config.padding;
 
-        for (let i = 0; i < attempts; i++) {
+                for (let i = 0; i < attempts; i++) {
 
-            this.positions = [];
-            let points: Array<Vector> | null = null;
+                    this.positions = [];
+                    let points: Array<Vector> | null = null;
 
-            // 10 attempts
-            for (let i = 0; i < 100; i++) {
-                points = this.generatePoints(this.positionCount, minPointDistance, padding, 1000);
-                if (!!points) {
-                    break;
+                    // 10 attempts
+                    for (let i = 0; i < attempts; i++) {
+                        points = this.generatePoints(this.positionCount, minPointDistance, padding, 1000);
+                        if (!!points) {
+                            break;
+                        }
+                        console.log('failed to generate points... trying again...');
+                    }
+
+                    if (!points) {
+                        throw Error('Failed to generate the map!');
+                    }
+
+
+                    // make positions for all points
+                    this.positions = points.map(point => new MapPosition(point));
+
+                    // make connectors for all positions
+                    this.positions.forEach(position => position.createConnections(this.positions));
+
+                    // now sort positions based on average connection distance
+                    this.positions = this.positions.sort((a: MapPosition, b: MapPosition) => {
+                        return a.averageConnectionDistance! - b.averageConnectionDistance!
+                    });
+
+                    this.assignAreasToPositions();
+
+                    // TODO: evaluate the generated map here, and break when succesful
+                    if (this.evaluate()) {
+                        console.log('succesfully generated map');
+                        break;
+                    }
+                    if (i < attempts) {
+                        console.log('bad evaluation... trying again...');
+                    } else {
+                        console.log('map was still flawed... continue anyways');
+                    }
                 }
-                console.log('failed to generate points... trying again...');
-            }
 
-            if (!points) {
-                throw Error('Failed to generate the map!');
-            }
-
-
-            // make positions for all points
-            this.positions = points.map(point => new MapPosition(point));
-
-            // make connectors for all positions
-            this.positions.forEach(position => position.createConnections(this.positions));
-
-            // now sort positions based on average connection distance
-            this.positions = this.positions.sort((a: MapPosition, b: MapPosition) => {
-                return a.averageConnectionDistance! - b.averageConnectionDistance!
-            });
-
-            this.assignAreasToPositions();
-
-            // TODO: evaluate the generated map here, and break when succesful
-            if(this.evaluate()) {
-                console.log('succesfully generated map');
-                break;
-            }
-            if(i<100) {
-                console.log('bad evaluation... trying again...');
-            } else {
-                console.log('map was still flawed... continue anyways');
-            }       
-        }
+                resolve();
+            }, 0);
+        })
     }
 
     private generatePoints(pointCount: number, minPointDistance: number, padding: number, maxCycles: number = 1000): Array<Vector> | null {
@@ -126,16 +135,15 @@ export class GameMap {
         }
     }
 
-    private evaluate(): boolean
-    {
+    private evaluate(): boolean {
         // check if all positions are connected
-        if(!this.checkIfHasOverlaps()) {
+        if (!this.checkIfHasOverlaps()) {
             console.log('potential overlap found');
             return false;
         }
 
         // check if a position is on a connection
-        if(!this.checkIfConnected()) {
+        if (!this.checkIfConnected()) {
             console.log('might not be connected');
             return false;
         }
@@ -170,11 +178,11 @@ export class GameMap {
                 const pointOnLine = position.position.projectToLine(connection.positionA.position, connection.positionB.position);
 
                 const distanceDiff = Math.abs((pointOnLine.distance(connection.positionA.position) + pointOnLine.distance(connection.positionB.position)) - (connection.positionA.position.distance(connection.positionB.position)));
-                if(distanceDiff > 0) {
+                if (distanceDiff > 0) {
                     continue;
                 }
 
-                if(pointOnLine.distance(position.position) <= (15 * 2)) {
+                if (pointOnLine.distance(position.position) <= (15 * 2)) {
                     return false;
                 }
             }
@@ -192,36 +200,40 @@ export class GameMap {
 
             // check if found already
             const foundGoodPoint = goodPoints.find(v => v.matches(point.position));
-            if(!!foundGoodPoint) continue;
+            if (!!foundGoodPoint) continue;
 
             let reached = false;
             const allConnectedPoints: Array<Vector> = [];
             this.loopThroughtConnectedPositions(point, (mapPosition) => {
                 allConnectedPoints.push(mapPosition.position);
-                if(reached) return;
-                if(mapPosition.position.matches(reachPoint.position)) {
+                if (reached) return;
+                if (mapPosition.position.matches(reachPoint.position)) {
                     reached = true;
                 }
             });
-            if(!reached) return false;
+            if (!reached) return false;
             allConnectedPoints.forEach(p => goodPoints.push(p));
         }
 
         return true;
     }
 
-    private loopThroughtConnectedPositions(mapPosition: MapPosition, callback: (pos: MapPosition) => void, visited: Array<Vector> = [], maxDepth = Math.ceil(this.positions.length/2))
-    {
+    private loopThroughtConnectedPositions(
+        mapPosition: MapPosition,
+        callback: (pos: MapPosition) => void,
+        visited: Array<Vector> = [],
+        maxDepth = Math.ceil((this.positions.length*2) * this.config.generationStrengthPercent)
+    ) {
         maxDepth--;
 
-        if(maxDepth < 0) {
+        if (maxDepth < 0) {
             return;
         }
 
         // check if this has already been visited
         const foundVisited = visited.find(vec => vec.matches(mapPosition.position));
 
-        if(!!foundVisited) {
+        if (!!foundVisited) {
             // console.log('found visited');
             return;
         }
@@ -241,7 +253,7 @@ export class GameMap {
         // loop through connected positions
         for (const conn of mapPosition.connections) {
             const foundVisited = visited.find(vec => vec.matches(conn.positionB.position));
-            if(!!foundVisited) continue;
+            if (!!foundVisited) continue;
             this.loopThroughtConnectedPositions(conn.positionB, callback, newVisited, maxDepth);
         }
     }

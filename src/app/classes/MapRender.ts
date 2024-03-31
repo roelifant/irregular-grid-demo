@@ -1,7 +1,9 @@
 import { Application, Container, Graphics } from "pixi.js";
 import { GameMap } from "./GameMap";
+import { IMapRenderConfig } from "../interfaces/IMapRenderConfig";
 
 export class MapRender {
+    public config: IMapRenderConfig;
     public canvas: HTMLCanvasElement;
     public map: GameMap;
     public pixiApp: Application;
@@ -9,9 +11,10 @@ export class MapRender {
     public positionContainer!: Container;
     private connectionContainer!: Container;
 
-    constructor(canvas: HTMLCanvasElement, map: GameMap) {
-        this.canvas = canvas;
-        this.map = map;
+    constructor(config: IMapRenderConfig) {
+        this.config = config;
+        this.canvas = config.canvas;
+        this.map = config.map;
 
         this.pixiApp = new Application();
     }
@@ -38,7 +41,7 @@ export class MapRender {
 
         this.map.positions.forEach(position => {
             const circle = (new Graphics())
-            .circle(0, 0, 15)
+            .circle(0, 0, this.config.pointSize)
             .fill(0xcfcfcf);
 
             this.positionContainer.addChild(circle);
@@ -58,7 +61,7 @@ export class MapRender {
                     .lineTo(connection.positionB.position.x, connection.positionB.position.y)
                     .stroke({
                         color: 'white',
-                        width: 3
+                        width: this.config.connectionWidth
                     });
                 
                 this.connectionContainer.addChild(line);

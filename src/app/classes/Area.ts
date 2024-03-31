@@ -30,7 +30,7 @@ export class Area {
             allPossibleAreas.push(new Area('test area with four connections', 4));
         }
 
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < 10; i++) {
             allPossibleAreas.push(new Area('test area with three connections', 3));
         }
 
