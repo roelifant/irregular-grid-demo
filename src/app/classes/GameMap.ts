@@ -1,5 +1,6 @@
 import { Vector } from "../vectors/Vector";
 import { Area } from "./Area";
+import { MapConnection } from "./MapConnection";
 import { MapPosition } from "./MapPosition";
 import { MapSurface } from "./MapSurface";
 
@@ -22,7 +23,49 @@ export class GameMap {
         this.generate(minPointDistance, padding);
     }
 
-    private generate(minPointDistance: number, padding: number, attempts: number = 10) {
+    static evaluate(map: GameMap): boolean
+    {
+        // check if a position is on a connection
+        // the method below does seem to make a difference in reducing overlap cases, but still often fails to detect the overlap
+
+        // loop over positions
+        for (const position of map.positions) {
+            // get closest other positions
+            let closestPositions = map.positions.sort((a: MapPosition, b: MapPosition) => {
+                return a.position.distance(position.position) - b.position.distance(position.position);
+            }).slice(0, map.positions.length);
+
+            closestPositions.shift();
+
+            // get all relevant connections from closest point
+            const connections: Array<MapConnection> = [];
+            for (const closePos of closestPositions) {
+                closePos.connections
+                    .filter(con => {
+                        return !con.positionA.position.matches(position.position) && !con.positionB.position.matches(position.position)
+                    })
+                    .forEach(con => connections.push(con));
+            }
+
+            // figure out if current point is on any of the connections
+            for (const connection of connections) {
+                const pointOnLine = position.position.projectToLine(connection.positionA.position, connection.positionB.position);
+
+                const distanceDiff = Math.abs((pointOnLine.distance(connection.positionA.position) + pointOnLine.distance(connection.positionB.position)) - (connection.positionA.position.distance(connection.positionB.position)));
+                if(distanceDiff > 0) {
+                    continue;
+                }
+
+                if(pointOnLine.distance(position.position) <= (15 * 2)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private generate(minPointDistance: number, padding: number, attempts: number = 50) {
 
         for (let i = 0; i < attempts; i++) {
 
@@ -30,7 +73,7 @@ export class GameMap {
             let points: Array<Vector> | null = null;
 
             // 10 attempts
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 100; i++) {
                 points = this.generatePoints(this.positionCount, minPointDistance, padding, 1000);
                 if (!!points) {
                     break;
@@ -57,12 +100,12 @@ export class GameMap {
             this.assignAreasToPositions();
 
             // TODO: evaluate the generated map here, and break when succesful
-            console.log('succesfully generated map');
-            break;
+            if(this.evaluateSelf() || true) {
+                console.log('succesfully generated map');
+                break;
+            }
+            console.log('map was flawed... continue anyways');
         }
-
-        console.log('map was flawed... continue anyways');
-
     }
 
     private generatePoints(pointCount: number, minPointDistance: number, padding: number, maxCycles: number = 1000): Array<Vector> | null {
@@ -119,5 +162,10 @@ export class GameMap {
 
             area.setPosition(position);
         }
+    }
+
+    private evaluateSelf(): boolean
+    {
+        return GameMap.evaluate(this);
     }
 }
