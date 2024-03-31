@@ -302,7 +302,7 @@ export class Vector {
         return Vector.fromVector(this);
     }
 
-    public matches(vector: Vector): boolean {
+    public matches(vector: Vector, accuracy: number = 3): boolean {
         if(this.components.length !== vector.components.length) {
             return false;
         }
@@ -311,7 +311,7 @@ export class Vector {
             const thisComp = this.components[i];
             const otherComp = vector.components[i];
 
-            if(thisComp !== otherComp) {
+            if(Vector.utils.roundToNDecimals(thisComp, accuracy) !== Vector.utils.roundToNDecimals(otherComp, accuracy)) {
                 return false;
             }
         }

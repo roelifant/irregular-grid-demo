@@ -23,48 +23,6 @@ export class GameMap {
         this.generate(minPointDistance, padding);
     }
 
-    static evaluate(map: GameMap): boolean
-    {
-        // check if a position is on a connection
-        // the method below does seem to make a difference in reducing overlap cases, but still often fails to detect the overlap
-
-        // loop over positions
-        for (const position of map.positions) {
-            // get closest other positions
-            let closestPositions = map.positions.sort((a: MapPosition, b: MapPosition) => {
-                return a.position.distance(position.position) - b.position.distance(position.position);
-            }).slice(0, map.positions.length);
-
-            closestPositions.shift();
-
-            // get all relevant connections from closest point
-            const connections: Array<MapConnection> = [];
-            for (const closePos of closestPositions) {
-                closePos.connections
-                    .filter(con => {
-                        return !con.positionA.position.matches(position.position) && !con.positionB.position.matches(position.position)
-                    })
-                    .forEach(con => connections.push(con));
-            }
-
-            // figure out if current point is on any of the connections
-            for (const connection of connections) {
-                const pointOnLine = position.position.projectToLine(connection.positionA.position, connection.positionB.position);
-
-                const distanceDiff = Math.abs((pointOnLine.distance(connection.positionA.position) + pointOnLine.distance(connection.positionB.position)) - (connection.positionA.position.distance(connection.positionB.position)));
-                if(distanceDiff > 0) {
-                    continue;
-                }
-
-                if(pointOnLine.distance(position.position) <= (15 * 2)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
     private generate(minPointDistance: number, padding: number, attempts: number = 50) {
 
         for (let i = 0; i < attempts; i++) {
@@ -78,7 +36,7 @@ export class GameMap {
                 if (!!points) {
                     break;
                 }
-                console.log('failed to generate... trying again...');
+                console.log('failed to generate points... trying again...');
             }
 
             if (!points) {
@@ -100,11 +58,15 @@ export class GameMap {
             this.assignAreasToPositions();
 
             // TODO: evaluate the generated map here, and break when succesful
-            if(this.evaluateSelf() || true) {
+            if(this.evaluate()) {
                 console.log('succesfully generated map');
                 break;
             }
-            console.log('map was flawed... continue anyways');
+            if(i<100) {
+                console.log('bad evaluation... trying again...');
+            } else {
+                console.log('map was still flawed... continue anyways');
+            }       
         }
     }
 
@@ -164,8 +126,123 @@ export class GameMap {
         }
     }
 
-    private evaluateSelf(): boolean
+    private evaluate(): boolean
     {
-        return GameMap.evaluate(this);
+        // check if all positions are connected
+        if(!this.checkIfHasOverlaps()) {
+            console.log('potential overlap found');
+            return false;
+        }
+
+        // check if a position is on a connection
+        if(!this.checkIfConnected()) {
+            console.log('might not be connected');
+            return false;
+        }
+
+        return true;
+    }
+
+    private checkIfHasOverlaps() {
+        // this method does seem to make a difference in reducing overlap cases, but still often fails to detect the overlap
+
+        // loop over positions
+        for (const position of this.positions) {
+            // get closest other positions
+            let closestPositions = this.positions.sort((a: MapPosition, b: MapPosition) => {
+                return a.position.distance(position.position) - b.position.distance(position.position);
+            }).slice(0, this.positions.length);
+
+            closestPositions.shift();
+
+            // get all relevant connections from closest point
+            const connections: Array<MapConnection> = [];
+            for (const closePos of closestPositions) {
+                closePos.connections
+                    .filter(con => {
+                        return !con.positionA.position.matches(position.position) && !con.positionB.position.matches(position.position)
+                    })
+                    .forEach(con => connections.push(con));
+            }
+
+            // figure out if current point is on any of the connections
+            for (const connection of connections) {
+                const pointOnLine = position.position.projectToLine(connection.positionA.position, connection.positionB.position);
+
+                const distanceDiff = Math.abs((pointOnLine.distance(connection.positionA.position) + pointOnLine.distance(connection.positionB.position)) - (connection.positionA.position.distance(connection.positionB.position)));
+                if(distanceDiff > 0) {
+                    continue;
+                }
+
+                if(pointOnLine.distance(position.position) <= (15 * 2)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private checkIfConnected(): boolean {
+        // check if all points can reach this
+        const reachPoint = this.positions[0];
+        const goodPoints: Array<Vector> = [];
+
+        for (const point of this.positions) {
+
+            // check if found already
+            const foundGoodPoint = goodPoints.find(v => v.matches(point.position));
+            if(!!foundGoodPoint) continue;
+
+            let reached = false;
+            const allConnectedPoints: Array<Vector> = [];
+            this.loopThroughtConnectedPositions(point, (mapPosition) => {
+                allConnectedPoints.push(mapPosition.position);
+                if(reached) return;
+                if(mapPosition.position.matches(reachPoint.position)) {
+                    reached = true;
+                }
+            });
+            if(!reached) return false;
+            allConnectedPoints.forEach(p => goodPoints.push(p));
+        }
+
+        return true;
+    }
+
+    private loopThroughtConnectedPositions(mapPosition: MapPosition, callback: (pos: MapPosition) => void, visited: Array<Vector> = [], maxDepth = Math.ceil(this.positions.length/2))
+    {
+        maxDepth--;
+
+        if(maxDepth < 0) {
+            return;
+        }
+
+        // check if this has already been visited
+        const foundVisited = visited.find(vec => vec.matches(mapPosition.position));
+
+        if(!!foundVisited) {
+            // console.log('found visited');
+            return;
+        }
+
+        // console.log('looping through new map position');
+
+        // add to visited
+        const newVisited = [...visited.map(vec => vec.copy())];
+        newVisited.push(mapPosition.position.copy());
+
+        // console.log(visited.length);
+        // console.log(newVisited.length);
+
+        // execute callback
+        callback(mapPosition);
+
+        // loop through connected positions
+        for (const conn of mapPosition.connections) {
+            const foundVisited = visited.find(vec => vec.matches(conn.positionB.position));
+            if(!!foundVisited) continue;
+            this.loopThroughtConnectedPositions(conn.positionB, callback, newVisited, maxDepth);
+        }
     }
 }
